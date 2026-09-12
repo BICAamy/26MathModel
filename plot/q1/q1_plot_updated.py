@@ -36,12 +36,14 @@
    q1_solver_fdm.py，以 dr=0.025 cm、dt=0.05 s 重新计算并缓存。
    这一组参数与 q1.docx 中“更细网格验证”的误差统计一致。
 3. 所有图同时输出 600 dpi PNG 和 PDF，适合插入 Word 论文。
+4. 每张图的子图在下方自动按 (a)、(b)、(c)... 顺序编号。
 """
 
 from __future__ import annotations
 
 import argparse
 import importlib.util
+import string
 from pathlib import Path
 from typing import Tuple
 
@@ -141,6 +143,37 @@ def style_axis(ax: plt.Axes) -> None:
     ax.tick_params(direction="in", top=True, right=True)
     for spine in ax.spines.values():
         spine.set_linewidth(0.8)
+
+
+def add_subplot_labels(axes, y: float = -0.23, fontsize: float = 11.0) -> None:
+    """
+    在每个子图下方按顺序自动添加 (a)、(b)、(c)... 标号。
+
+    参数
+    ----
+    axes:
+        Matplotlib Axes 对象、列表/元组，或 ndarray。
+    y:
+        标号在子图坐标系中的纵向位置；0 为坐标轴底边，负值表示底边下方。
+    fontsize:
+        标号字号。
+    """
+    axes_arr = np.atleast_1d(axes).ravel()
+
+    if len(axes_arr) > len(string.ascii_lowercase):
+        raise ValueError("当前子图自动编号最多支持 26 个子图。")
+
+    for i, ax in enumerate(axes_arr):
+        ax.text(
+            0.5,
+            y,
+            f"({string.ascii_lowercase[i]})",
+            transform=ax.transAxes,
+            ha="center",
+            va="top",
+            fontsize=fontsize,
+            clip_on=False,
+        )
 
 
 def save_figure(fig: plt.Figure, output_dir: Path, stem: str) -> None:
@@ -327,7 +360,7 @@ def plot_spatiotemporal_fields(
     cbar_T = fig.colorbar(cf_T, ax=axes[0], pad=0.02)
     cbar_T.set_label(r"温度 $T/{}^\circ\mathrm{C}$")
 
-    axes[0].set_title("(a) 药材内部温度场")
+    axes[0].set_title("药材内部温度场")
     axes[0].set_xlabel(r"时间 $t/\mathrm{s}$")
     axes[0].set_ylabel(r"到药材中心距离 $r/\mathrm{cm}$")
     axes[0].set_xlim(times[0], times[-1])
@@ -349,7 +382,7 @@ def plot_spatiotemporal_fields(
     cbar_C = fig.colorbar(cf_C, ax=axes[1], pad=0.02)
     cbar_C.set_label(r"水分浓度 $C/(\mathrm{kg}\cdot\mathrm{kg}^{-1})$")
 
-    axes[1].set_title("(b) 药材内部水分浓度场")
+    axes[1].set_title("药材内部水分浓度场")
     axes[1].set_xlabel(r"时间 $t/\mathrm{s}$")
     axes[1].set_ylabel(r"到药材中心距离 $r/\mathrm{cm}$")
     axes[1].set_xlim(times[0], times[-1])
@@ -357,6 +390,8 @@ def plot_spatiotemporal_fields(
     axes[1].set_xticks(np.arange(0, 1801, 300))
     axes[1].set_yticks(np.arange(0, 2.01, 0.5))
     axes[1].tick_params(direction="in")
+
+    add_subplot_labels(axes)
 
     print("保存图2：温度场 / 水分浓度场二维时空分布图")
     save_figure(fig, output_dir, "q1_fig2_spatiotemporal_fields")
@@ -409,7 +444,7 @@ def plot_radial_profiles(
             label=f"{t} s",
         )
 
-    axes[0].set_title("(a) 典型时刻温度径向分布")
+    axes[0].set_title("典型时刻温度径向分布")
     axes[0].set_xlabel(r"到药材中心距离 $r/\mathrm{cm}$")
     axes[0].set_ylabel(r"温度 $T/{}^\circ\mathrm{C}$")
     axes[0].set_xlim(r_cm[0], r_cm[-1])
@@ -417,13 +452,15 @@ def plot_radial_profiles(
     axes[0].legend(frameon=False, ncol=2)
     style_axis(axes[0])
 
-    axes[1].set_title("(b) 典型时刻水分浓度径向分布")
+    axes[1].set_title("典型时刻水分浓度径向分布")
     axes[1].set_xlabel(r"到药材中心距离 $r/\mathrm{cm}$")
     axes[1].set_ylabel(r"水分浓度 $C/(\mathrm{kg}\cdot\mathrm{kg}^{-1})$")
     axes[1].set_xlim(r_cm[0], r_cm[-1])
     axes[1].set_xticks(np.arange(0, 2.01, 0.25))
     axes[1].legend(frameon=False, ncol=2)
     style_axis(axes[1])
+
+    add_subplot_labels(axes)
 
     print("保存图3：典型时刻温度 / 水分浓度径向分布")
     save_figure(fig, output_dir, "q1_fig3_radial_profiles")
@@ -497,7 +534,7 @@ def plot_validation_errors(
         s=24, zorder=4, color=line_T.get_color(),
         label=f"最大值：t={times[iT]:g} s",
     )
-    axes[0].set_title("(a) 温度场逐时刻最大绝对误差")
+    axes[0].set_title("温度场逐时刻最大绝对误差")
     axes[0].set_xlabel(r"时间 $t/\mathrm{s}$")
     axes[0].set_ylabel(r"$\max_r |T_{\mathrm{FDM}}-T_{\mathrm{FVM}}|/{}^\circ\mathrm{C}$")
     axes[0].set_xlim(times[0], times[-1])
@@ -515,7 +552,7 @@ def plot_validation_errors(
         s=24, zorder=4, color=line_C.get_color(),
         label=f"最大值：t={times[iC]:g} s",
     )
-    axes[1].set_title("(b) 水分场逐时刻最大绝对误差")
+    axes[1].set_title("水分场逐时刻最大绝对误差")
     axes[1].set_xlabel(r"时间 $t/\mathrm{s}$")
     axes[1].set_ylabel(r"$\max_r |C_{\mathrm{FDM}}-C_{\mathrm{FVM}}|/(\mathrm{kg}\cdot\mathrm{kg}^{-1})$")
     axes[1].set_xlim(times[0], times[-1])
@@ -525,6 +562,8 @@ def plot_validation_errors(
     axes[1].legend(frameon=False, loc="lower right")
     add_error_annotation(axes[1], max_C, mean_C, "kg/kg")
     style_axis(axes[1])
+
+    add_subplot_labels(axes)
 
     print("保存图4：FVM+RK45 与 FDM+FTCS 的误差验证")
     save_figure(fig, output_dir, "q1_fig4_validation_errors")
